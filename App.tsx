@@ -1,118 +1,101 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import React from 'react';
-import type {PropsWithChildren} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
+  AppState,
   Text,
-  useColorScheme,
+  TouchableOpacity,
   View,
+  PermissionsAndroid,
 } from 'react-native';
+import CallKeep from 'react-native-callkeep';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+export default function App() {
+  const [isInCall, setIsInCall] = useState(false);
+  useEffect(() => {
+    // Configuración de CallKeep
+    CallKeep.setup({
+      ios: {
+        appName: 'MiApp',
+      },
+      android: {
+        alertTitle: 'Permissions required',
+        alertDescription:
+          'This application needs to access your phone accounts',
+        cancelButton: 'Cancel',
+        okButton: 'ok',
+        selfManaged: true,
+        imageName: 'phone_account_icon',
+        additionalPermissions: [],
+        // Required to get audio in background when using Android 11
+        foregroundService: {
+          channelId: 'com.phonecaller',
+          channelName: 'PhoneCaller Foreground Service',
+          notificationTitle: 'My app is running on background',
+          notificationIcon: 'Path to the resource icon of the notification',
+        },
+      },
+    });
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+    // Manejo del cambio de estado de la aplicación
+    AppState.addEventListener('change', handleAppStateChange);
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
+    CallKeep.addEventListener('didReceiveStartCallAction', handler => {
+      console.log('START CALL', handler);
+      setIsInCall(true);
+    });
+    CallKeep.addEventListener('endCall', handler => {
+      console.log('END CALL', handler);
+      setIsInCall(false);
+    });
+
+    return () => {
+      CallKeep.removeEventListener('didReceiveStartCallAction')
+      CallKeep.removeEventListener('endCall')
+    }
+  }, []);
+
+  const handleAppStateChange = (nextAppState: any) => {
+    if (nextAppState === 'active') {
+      // Configuración adecuada al volver a la aplicación
+      CallKeep.setup({
+        ios: {
+          appName: 'MiApp',
+        },
+        android: {
+          alertTitle: 'Permissions required',
+          alertDescription:
+            'This application needs to access your phone accounts',
+          cancelButton: 'Cancel',
+          okButton: 'ok',
+          imageName: 'phone_account_icon',
+          selfManaged: true,
+          additionalPermissions: [],
+          // Required to get audio in background when using Android 11
+          foregroundService: {
+            channelId: 'com.phonecaller',
+            channelName: 'PhoneCaller Foreground Service',
+            notificationTitle: 'My app is running on background',
+            notificationIcon: 'Path to the resource icon of the notification',
           },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+        },
+      });
+    }
+  };
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+  const startCall = () => {
+    const callUUID = '12345'; // UUID único para identificar la llamada
+    const number = '+584127550254'; // Número de teléfono al que se realizará la llamada
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+    CallKeep.startCall(callUUID, number, 'Daniel', 'number', false);
   };
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
+    <View>
+      <TouchableOpacity onPress={startCall}>
+        <View>
+          <Text>Make phonecall</Text>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </TouchableOpacity>
+      {isInCall && <Text>En una llamada</Text>}
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
-
-export default App;
